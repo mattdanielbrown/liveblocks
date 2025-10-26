@@ -10,8 +10,8 @@
   },
   "devDependencies": {
     "prettier": "^3.3.2",
-    "vite": "^2.8.6",
-    "vite-plugin-solid": "^2.2.6"
+    "vite": "^5.4.21",
+    "vite-plugin-solid": "^2.3.0"
   },
   "dependencies": {
     "@liveblocks/client": "^3.7.1",

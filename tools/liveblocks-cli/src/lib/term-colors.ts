@@ -35,6 +35,10 @@ export function red(text: string): string {
   return `\x1b[31m${text}\x1b[0m`;
 }
 
+export function bold(text: string): string {
+  return `\x1b[1m${text}\x1b[0m`;
+}
+
 export function dim(text: string): string {
   return `\x1b[2m${text}\x1b[0m`;
 }

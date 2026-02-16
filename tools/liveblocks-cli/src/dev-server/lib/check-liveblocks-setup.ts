@@ -15,7 +15,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { blue, dim, green, magenta, yellow } from "~/lib/term-colors";
+import { blue, bold, dim, green, magenta, yellow } from "~/lib/term-colors";
 
 interface GrepMatch {
   file: string;
@@ -79,6 +79,7 @@ function isCommentedOut(text: string): boolean {
 // and the code snippet to suggest
 interface Check {
   pattern: string;
+  closePattern: string;
   expected: string;
   fixSnippet: (baseUrl: string) => string;
 }
@@ -88,16 +89,19 @@ const CHECKS: Check[] = [
     pattern: "<LiveblocksProvider",
     expected: "baseUrl=",
     fixSnippet: (url) => `${magenta("baseUrl")}=${green(`"${url}"`)}`,
+    closePattern: ">",
   },
   {
     pattern: "createClient(",
     expected: "baseUrl:",
     fixSnippet: (url) => `${magenta("baseUrl")}: ${green(`"${url}"`)}`,
+    closePattern: ")",
   },
   {
     pattern: "new Liveblocks(",
     expected: "baseUrl:",
     fixSnippet: (url) => `${magenta("baseUrl")}: ${green(`"${url}"`)}`,
+    closePattern: ")",
   },
 ];
 
@@ -142,62 +146,96 @@ export async function checkLiveblocksSetup(
     console.log("  Missing baseUrl in the following location(s):\n");
     for (const { match, check } of issues) {
       console.log(`    ${blue(`${match.file}:${match.line}`)}`);
-      console.log(`      To fix, add ${check.fixSnippet(baseUrl)}`);
+      console.log(
+        `      To fix, add ${check.fixSnippet(baseUrl)} to ${magenta(check.pattern)}${magenta(check.closePattern)}`
+      );
       console.log();
     }
-    console.log(dim("  ╭────────────────────────────────────────────────────╮")); // prettier-ignore
-    console.log(dim("  │ Press p to copy an AI fix prompt to your clipboard │")); // prettier-ignore
-    console.log(dim("  ╰────────────────────────────────────────────────────╯")); // prettier-ignore
+    console.log(dim("  ╭───────────────────────────────────────────────────────╮")); // prettier-ignore
+    console.log(dim("  │ 💡 ") + "Press " + bold("p") + " to copy an AI fix prompt to your clipboard" + dim(" │")); // prettier-ignore
+    console.log(dim("  ╰───────────────────────────────────────────────────────╯")); // prettier-ignore
     console.log();
   }
 
   return issues;
 }
 
-const PLAIN_FIX_SNIPPETS: Record<string, (url: string) => string> = {
-  "<LiveblocksProvider": (url) => `baseUrl="${url}"`,
-  "createClient(": (url) => `baseUrl: "${url}"`,
-  "new Liveblocks(": (url) => `baseUrl: "${url}"`,
-};
-
-const DEV_KEY_FOR_PATTERN: Record<string, { prop: string; value: string }> = {
-  "<LiveblocksProvider": { prop: "publicApiKey", value: "pk_localdev" },
-  "createClient(": { prop: "publicApiKey", value: "pk_localdev" },
-  "new Liveblocks(": { prop: "secret", value: "sk_localdev" },
+const BASEURL_SYNTAX: Record<string, string> = {
+  "<LiveblocksProvider": "baseUrl={...}",
+  "createClient(": "baseUrl: ...",
+  "new Liveblocks(": "baseUrl: ...",
 };
 
 export function buildFixPrompt(
   matches: ConfigIssue[],
   baseUrl: string
 ): string {
-  const lines = [
-    `In the following file(s), the Liveblocks setup is missing a \`baseUrl\` property pointing to the local dev server at ${baseUrl}. Please add the missing configuration:`,
-    "",
-  ];
+  const fileList = matches
+    .map(({ match, check }) => {
+      const syntax = BASEURL_SYNTAX[check.pattern] ?? "baseUrl: ...";
+      return `     - In \`${match.file}\` at line ${match.line}, add \`${syntax}\` to the \`${check.pattern}\` call`;
+    })
+    .join("\n");
 
-  for (const { match, check } of matches) {
-    const snippet =
-      PLAIN_FIX_SNIPPETS[check.pattern]?.(baseUrl) ?? `baseUrl: "${baseUrl}"`;
-    lines.push(
-      `- In \`${match.file}\` at line ${match.line}, add \`${snippet}\` to the \`${check.pattern}\` call`
-    );
-  }
+  return `# Set up Liveblocks dev server
 
-  lines.push(
-    "",
-    "Also make sure the API keys are set to the local dev server keys:"
-  );
+1. Check which system the application is using for environment variables, then
+   add a new environment variable called \`USE_LIVEBLOCKS_DEV_SERVER="true"\`.
+   This will be used to enable the dev server. It needs to be available on the client, so it may need to be called
+   \`NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER\` or similar. Do not rename or modify existing variables.
+2. You must use \`"${baseUrl}"\` as a \`baseUrl\` when the dev server is
+   enabled. In the following files add a \`baseUrl\` property for this when the
+   dev server is enabled, otherwise set \`baseUrl\` to \`undefined\`:
+${fileList}
 
-  const mentioned = new Set<string>();
-  for (const { check } of matches) {
-    const key = DEV_KEY_FOR_PATTERN[check.pattern];
-    if (key && !mentioned.has(key.value)) {
-      mentioned.add(key.value);
-      lines.push(
-        `- Set \`${key.prop}\` to \`"${key.value}"\` (either directly or via an environment variable)`
-      );
-    }
-  }
+3. Identify if the user is using \`publicApiKey\` in \`LiveblocksProvider\` or
+   \`secret\` in \`new Liveblocks\`. Edit the existing property to use "pk_localdev"
+   (for \`publicApikey\`) or "sk_localdev" (for \`secret\`) when the dev server is
+   enabled.
 
-  return lines.join("\n");
+## Examples
+
+Remember to keep the user's current system for environment variables and names.
+In the following snippets, I have given the following names, but the user's
+system may work differently: \`process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY\`
+and \`process.env.LIVEBLOCKS_SECRET_KEY\`.
+
+### Public key example
+
+If the user is already using the public key with \`publicApKey\`:
+
+\`\`\`env file=".env.local"
+NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER="true"
+\`\`\`
+
+\`\`\`tsx file="src/app/Providers.tsx"
+<LiveblocksProvider
+  baseUrl={process.env.NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER === "true" ? "${baseUrl}" : undefined}
+  publicApiKey={process.env.NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER === "true" ? "pk_localdev" : process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY}
+\`\`\`
+
+### Secret key example
+
+If the user is already using their secret key with \`secret\`:
+
+\`\`\`env file=".env.local"
+NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER="true"
+\`\`\`
+
+\`\`\`tsx file="src/app/Providers.tsx"
+<LiveblocksProvider
+  baseUrl={process.env.NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER === "true" ? "${baseUrl}" : undefined}
+\`\`\`
+
+\`\`\`ts file="src/app/api/liveblocks-auth/route.ts"
+new Liveblocks({
+  baseUrl={process.env.NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER === "true" ? "${baseUrl}" : undefined}
+  secret={process.env.NEXT_PUBLIC_USE_LIVEBLOCKS_DEV_SERVER === "true" ? "sk_localdev" : process.env.LIVEBLOCKS_SECRET_KEY}
+\`\`\`
+
+## Follow up
+
+Explain to the user that you've enabled the Liveblocks dev server by adding a an
+environment variable to the application, and share which file it is in. Explain
+that the user can disable this by setting it to "false".`;
 }

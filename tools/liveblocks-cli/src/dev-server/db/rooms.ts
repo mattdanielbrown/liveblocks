@@ -119,6 +119,8 @@ export async function create(roomId: string): Promise<void> {
  * Delete a room by removing its database file.
  */
 export async function remove(roomId: string): Promise<void> {
+  instances.get(roomId)?.unload();
+  instances.delete(roomId);
   const path = getSqlitePath(roomId);
   try {
     await Bun.write(path, ""); // Clear the file

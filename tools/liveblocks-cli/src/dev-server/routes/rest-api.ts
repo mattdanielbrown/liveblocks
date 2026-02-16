@@ -155,6 +155,16 @@ zen.route(
 zen.route("POST /v2/rooms/<roomId>", () => NOT_IMPLEMENTED());
 
 /**
+ * Delete a room
+ *
+ * Idempotent: returns 204 even if the room doesn't exist.
+ */
+zen.route("DELETE /v2/rooms/<roomId>", async ({ p }) => {
+  await RoomsDB.remove(p.roomId);
+  return new Response(null, { status: 204 });
+});
+
+/**
  * Get storage for a room
  */
 zen.route("GET /v2/rooms/<roomId>/storage", async ({ url, p }) => {
@@ -234,6 +244,28 @@ zen.route(
     });
   }
 );
+
+/**
+ * Delete storage for a room (reset to empty)
+ */
+zen.route("DELETE /v2/rooms/<roomId>/storage", async ({ p }) => {
+  const exists = await RoomsDB.exists(p.roomId);
+  if (!exists) {
+    throw ROOM_NOT_FOUND(p.roomId);
+  }
+
+  const room = RoomsDB.getOrCreate(p.roomId);
+  await room.load();
+
+  const emptyStorage: PlainLsonObject = {
+    liveblocksType: "LiveObject",
+    data: {},
+  };
+  await room.driver.DANGEROUSLY_reset_nodes(emptyStorage);
+  room.unload();
+
+  return new Response(null, { status: 204 });
+});
 
 zen.route("GET /v2/rooms/<roomId>/ydoc", async ({ url, p }) => {
   const exists = await RoomsDB.exists(p.roomId);
@@ -348,10 +380,8 @@ zen.route("GET /v2/rooms/<roomId>/ydoc-binary", async ({ url, p }) => {
 
 // prettier-ignore
 {
-  zen.route("DELETE /v2/rooms/<roomId>/storage", () => NOT_IMPLEMENTED());
   zen.route("GET /v2/rooms/<roomId>/threads", () => NOT_IMPLEMENTED());
   zen.route("POST /v2/rooms/<roomId>/upsert", () => NOT_IMPLEMENTED());
-  zen.route("DELETE /v2/rooms/<roomId>", () => NOT_IMPLEMENTED());
   zen.route("POST /v2/rooms/<roomId>/update-room-id", () => NOT_IMPLEMENTED());
   zen.route("POST /v2/rooms/<roomId>/update-tenant-id", () => NOT_IMPLEMENTED());
   zen.route("POST /v2/rooms/<roomId>/update-organization-id", () => NOT_IMPLEMENTED());

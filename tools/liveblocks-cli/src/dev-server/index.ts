@@ -33,7 +33,7 @@ import {
 } from "./lib/check-liveblocks-setup";
 import { copyToClipboard } from "./lib/clipboard";
 import { isPortInUse } from "./lib/probe-port";
-import { clearWarnings, warnOnce } from "./lib/xwarn";
+import { warn } from "./lib/xwarn";
 import { zen as authRoutes } from "./routes/auth";
 import { zen as clientApiRoutes } from "./routes/client-api";
 import { zen as publicRoutes } from "./routes/public";
@@ -140,7 +140,7 @@ const dev: SubCommand = {
           const authResult = authorizeWebSocket(req);
 
           if (!authResult.ok) {
-            warnOnce(authResult.xwarn);
+            warn(authResult.xwarn, true);
             return refuseSocketConnection(
               server,
               req,
@@ -186,8 +186,7 @@ const dev: SubCommand = {
               : green(String(status));
         console.log(`${colorStatus} ${route}`);
         const warnMsg = resp.headers.get("X-LB-Warn") ?? undefined;
-        const warnKey = resp.headers.get("X-LB-Warn-Key") ?? undefined;
-        warnOnce(warnMsg, warnKey);
+        warn(warnMsg, !resp.ok);
         return resp;
       },
 
@@ -252,7 +251,13 @@ const dev: SubCommand = {
     const configIssues = await checkLiveblocksSetup(port);
     const baseUrl = `http://localhost:${port}`;
 
-    console.log(dim("Press ") + bold("q") + dim(" to quit, ") + bold("c") + dim(" to clear"));
+    console.log(
+      dim("Press ") +
+        bold("q") +
+        dim(" to quit, ") +
+        bold("c") +
+        dim(" to clear")
+    );
 
     // Listen for keypresses
     if (process.stdin.isTTY) {
@@ -264,7 +269,6 @@ const dev: SubCommand = {
           void server.stop().then(() => process.exit(0));
         } else if (ch === "c") {
           console.clear();
-          clearWarnings();
         } else if (ch === "p") {
           if (configIssues.length > 0) {
             const prompt = buildFixPrompt(configIssues, baseUrl);

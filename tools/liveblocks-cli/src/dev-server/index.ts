@@ -99,7 +99,7 @@ const dev: SubCommand = {
   async run(_argv) {
     const args = parse(_argv, {
       string: ["port", "host"],
-      boolean: ["help", "check", "ephemeral"],
+      boolean: ["help", "check", "ephemeral", "ci"],
       default: { check: true },
       alias: { h: "help", p: "port" },
     });
@@ -112,11 +112,18 @@ const dev: SubCommand = {
       console.log("Options:");
       console.log(`  --port, -p    Port to listen on (default: ${DEFAULT_PORT})`); // prettier-ignore
       console.log("  --host        Host to bind to (default: localhost)");
+      console.log("  --ci          Best defaults for CI (same as --ephemeral --no-check)"); // prettier-ignore
       console.log("  --no-check    Skip project setup check");
       console.log("  --ephemeral   Do not persist state between restarts"); // prettier-ignore
       console.log("                  (Recommended for running unit tests.)"); // prettier-ignore
       console.log("  --help, -h    Show this help message");
       return;
+    }
+
+    // --ci is a shorthand for --ephemeral --no-check
+    if (args.ci) {
+      args.ephemeral = true;
+      args.check = false;
     }
 
     // Precedence: CLI flag > env var > default
@@ -127,9 +134,7 @@ const dev: SubCommand = {
     const hostname =
       args.host || process.env.LIVEBLOCKS_DEVSERVER_HOST || "localhost";
 
-    const ephemeralPath = args.ephemeral
-      ? RoomsDB.useEphemeralStorage()
-      : null;
+    const ephemeralPath = args.ephemeral ? RoomsDB.useEphemeralStorage() : null;
 
     if (await isPortInUse(port, hostname)) {
       console.error(

@@ -99,7 +99,8 @@ const dev: SubCommand = {
   async run(_argv) {
     const args = parse(_argv, {
       string: ["port", "host"],
-      boolean: ["help"],
+      boolean: ["help", "check"],
+      default: { check: true },
       alias: { h: "help", p: "port" },
     });
 
@@ -109,9 +110,10 @@ const dev: SubCommand = {
       console.log("Start the local Liveblocks dev server");
       console.log();
       console.log("Options:");
-      console.log(`  -p, --port   Port to listen on (default: ${DEFAULT_PORT})`); // prettier-ignore
-      console.log("      --host   Host to bind to (default: localhost)");
-      console.log("  -h, --help   Show this help message");
+      console.log(`  -p, --port       Port to listen on (default: ${DEFAULT_PORT})`); // prettier-ignore
+      console.log("      --host       Host to bind to (default: localhost)");
+      console.log("      --no-check   Skip project setup check");
+      console.log("  -h, --help       Show this help message");
       return;
     }
 
@@ -248,7 +250,9 @@ const dev: SubCommand = {
     );
 
     // Check if the current project is configured to use the local dev server
-    const configIssues = await checkLiveblocksSetup(port);
+    const configIssues = args.check
+      ? await checkLiveblocksSetup(port)
+      : [];
     const baseUrl = `http://localhost:${port}`;
 
     console.log(

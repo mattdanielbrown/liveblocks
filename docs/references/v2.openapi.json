@@ -40,8 +40,8 @@
               "type": "string"
             },
             "in": "query",
-            "name": "tenantId",
-            "description": "A filter on tenant ID."
+            "name": "organizationId",
+            "description": "A filter on organization ID."
           },
           {
             "schema": {
@@ -2847,7 +2847,7 @@
                       "name": "bob",
                       "avatar": "https://example.org/images/user123.jpg"
                     },
-                    "tenantId": "acme-corp",
+                    "organizationId": "acme-corp",
                     "permissions": {
                       "my-room-1": ["room:write"],
                       "my-room-2": ["room:write"],
@@ -2899,7 +2899,7 @@
                 "example": {
                   "value": {
                     "userId": "user-123",
-                    "tenantId": "acme-corp",
+                    "organizationId": "acme-corp",
                     "groupIds": ["marketing", "engineering"],
                     "userInfo": {
                       "name": "bob",
@@ -3224,8 +3224,8 @@
               "type": "string"
             },
             "in": "query",
-            "name": "tenantId",
-            "description": "The tenant ID to filter notifications for."
+            "name": "organizationId",
+            "description": "The organization ID to filter notifications for."
           },
           {
             "schema": {
@@ -6225,7 +6225,7 @@
           "userInfo": {
             "type": "object"
           },
-          "tenantId": {
+          "organizationId": {
             "type": "string"
           },
           "permissions": {
@@ -6246,7 +6246,7 @@
           "userId": {
             "type": "string"
           },
-          "tenantId": {
+          "organizationId": {
             "type": "string"
           },
           "groupIds": {
@@ -7959,7 +7959,7 @@
           "id": {
             "type": "string"
           },
-          "tenantId": {
+          "organizationId": {
             "type": "string"
           },
           "createdAt": {
@@ -7988,7 +7988,7 @@
         "required": [
           "type",
           "id",
-          "tenantId",
+          "organizationId",
           "createdAt",
           "updatedAt",
           "scopes",
@@ -8022,7 +8022,7 @@
               "type": "string"
             }
           },
-          "tenantId": {
+          "organizationId": {
             "type": "string"
           },
           "scopes": {

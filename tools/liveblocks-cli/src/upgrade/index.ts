@@ -15,12 +15,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { parse } from "@bomb.sh/args";
 import { execFileSync } from "child_process";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 
 import type { SubCommand } from "~/interfaces/SubCommand";
+import { parseArgs } from "~/lib/args";
 
 type PackageJson = {
   dependencies?: Record<string, string>;
@@ -104,16 +104,21 @@ function detectPackageManager(): "yarn" | "pnpm" | "bun" | "npm" {
   return "npm";
 }
 
+type Options = {
+  help: boolean;
+};
+
 const upgrade: SubCommand = {
   description: "Upgrade all Liveblocks packages",
 
-  run(_argv) {
-    const args = parse(_argv, {
-      boolean: ["help"],
-      alias: { h: "help" },
-    });
+  run(argv) {
+    const { options, args } = parseArgs<Options>(
+      argv,
+      { help: { type: "boolean", short: "h", default: false } },
+      { allowPositionals: true }
+    );
 
-    if (args.help) {
+    if (options.help) {
       console.log("Usage: liveblocks upgrade [version]");
       console.log();
       console.log("Upgrade all @liveblocks/* packages in your project to the same version."); // prettier-ignore
@@ -126,7 +131,7 @@ const upgrade: SubCommand = {
       return;
     }
 
-    const version = resolveVersion(String(args._[0] ?? "latest"));
+    const version = resolveVersion(String(args[0] ?? "latest"));
 
     // Read package.json
     const pkgPath = resolve(process.cwd(), "package.json");

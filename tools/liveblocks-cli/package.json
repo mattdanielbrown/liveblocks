@@ -38,7 +38,6 @@
     "eslint-plugin-license-header": "^0.8.0"
   },
   "dependencies": {
-    "@bomb.sh/args": "^0.3.1",
     "@liveblocks/core": "3.14.0",
     "@liveblocks/server": "1.0.8",
     "@liveblocks/zenrouter": "1.0.8",

@@ -207,7 +207,9 @@ const dev: SubCommand = {
           if (success) {
             // Bun automatically returns a 101 Switching Protocols
             // if the upgrade succeeds
-            console.log(`${green("101")} WS ${new URL(req.url).pathname}`);
+            console.log(
+              `${green("101")} WS ${new URL(req.url).pathname}${dim(` - ${roomId}`)}`
+            );
             return undefined;
           }
 
